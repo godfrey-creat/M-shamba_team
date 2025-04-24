@@ -1,606 +1,538 @@
-// FarmEye - Agricultural Monitoring System
-// main.js - Core application functionality
+// Wait for the DOM to be fully loaded before executing
+document.addEventListener('DOMContentLoaded', function() {
+  // --- Navigation Menu Functionality ---
+  initMobileNavigation();
+  
+  // --- Smooth Scrolling for Navigation Links ---
+  initSmoothScrolling();
+  
+  // --- Form Validation ---
+  initFormValidation();
+  
+  // --- Animate elements when they come into view ---
+  initScrollAnimations();
+  
+  // --- Initialize any sliders or carousels ---
+  initSliders();
+  
+  // --- Initialize Hero Image Carousel ---
+  initHeroCarousel();
+  
+  // --- Handle modal popups if any ---
+  initModalPopups();
+});
 
-// Global configuration
-const config = {
-    apiEndpoint: 'https://api.farmeye.com/v1',
-    refreshInterval: 60000, // Data refresh interval in milliseconds (1 minute)
-    mapSettings: {
-      initialZoom: 12,
-      center: { lat: 38.9072, lng: -77.0369 }, // Default location (update as needed)
-      tileProvider: 'openstreetmap'
-    }
-  };
+/**
+* Mobile Navigation Functionality
+* Toggles mobile menu and handles responsive behavior
+*/
+function initMobileNavigation() {
+  const nav = document.querySelector('nav');
+  const navMenu = document.querySelector('.nav-menu');
   
-  // App state
-  let state = {
-    farms: [],
-    sensors: [],
-    currentFarmId: null,
-    weatherData: null,
-    soilData: {},
-    lastUpdated: null,
-    isLoading: false,
-    user: null
-  };
+  // Create hamburger menu button for mobile
+  const hamburger = document.createElement('div');
+  hamburger.className = 'hamburger';
+  hamburger.innerHTML = '<span></span><span></span><span></span>';
+  nav.appendChild(hamburger);
   
-  // DOM Elements
-  const elements = {
-    farmSelector: document.getElementById('farm-selector'),
-    soilMoistureChart: document.getElementById('soil-moisture-chart'),
-    temperatureChart: document.getElementById('temperature-chart'),
-    weatherWidget: document.getElementById('weather-widget'),
-    mapContainer: document.getElementById('map-container'),
-    alertsPanel: document.getElementById('alerts-panel'),
-    loadingIndicator: document.getElementById('loading-indicator'),
-    refreshButton: document.getElementById('refresh-data-btn'),
-    settingsButton: document.getElementById('settings-btn'),
-    loginForm: document.getElementById('login-form')
-  };
+  // Toggle menu when hamburger is clicked
+  hamburger.addEventListener('click', function() {
+      navMenu.classList.toggle('active');
+      hamburger.classList.toggle('active');
+  });
   
-  // Initialize the application
-  function initApp() {
-    console.log('Initializing FarmEye application...');
-    
-    // Set up event listeners
-    setupEventListeners();
-    
-    // Check authentication
-    checkAuth()
-      .then(() => {
-        // Load initial data
-        loadFarms();
-        initMap();
-        startDataRefreshCycle();
-      })
-      .catch(error => {
-        console.error('Authentication error:', error);
-        showLoginScreen();
+  // Close menu when clicking on a link
+  const navLinks = document.querySelectorAll('.nav-menu a');
+  navLinks.forEach(link => {
+      link.addEventListener('click', function() {
+          navMenu.classList.remove('active');
+          hamburger.classList.remove('active');
       });
-  }
+  });
   
-  // Authentication check
-  async function checkAuth() {
-    try {
-      const token = localStorage.getItem('farmEyeToken');
-      
-      if (!token) {
-        throw new Error('No authentication token found');
+  // Close menu when clicking outside
+  document.addEventListener('click', function(event) {
+      if (!nav.contains(event.target)) {
+          navMenu.classList.remove('active');
+          hamburger.classList.remove('active');
       }
-      
-      // Validate token with API
-      const response = await fetch(`${config.apiEndpoint}/auth/validate`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      
-      if (!response.ok) {
-        throw new Error('Invalid authentication token');
+  });
+  
+  // Handle window resize
+  window.addEventListener('resize', function() {
+      if (window.innerWidth > 768) {
+          navMenu.classList.remove('active');
+          hamburger.classList.remove('active');
       }
-      
-      const userData = await response.json();
-      state.user = userData;
-      
-      return userData;
-    } catch (error) {
-      console.error('Authentication error:', error);
-      throw error;
-    }
+  });
+}
+
+/**
+* Smooth Scrolling Functionality
+* Makes navigation links scroll smoothly to their sections
+*/
+function initSmoothScrolling() {
+  const links = document.querySelectorAll('a[href^="#"]');
+  
+  links.forEach(link => {
+      link.addEventListener('click', function(e) {
+          e.preventDefault();
+          
+          const targetId = this.getAttribute('href');
+          if (targetId === '#') return;
+          
+          const targetElement = document.querySelector(targetId);
+          if (targetElement) {
+              // Calculate header height for offset
+              const headerHeight = document.querySelector('header').offsetHeight;
+              const targetPosition = targetElement.getBoundingClientRect().top + window.pageYOffset - headerHeight;
+              
+              window.scrollTo({
+                  top: targetPosition,
+                  behavior: 'smooth'
+              });
+          }
+      });
+  });
+}
+
+/**
+* Form Validation
+* Validates the contact form before submission
+*/
+function initFormValidation() {
+  const contactForm = document.querySelector('.contact-form');
+  
+  if (contactForm) {
+      contactForm.addEventListener('submit', function(e) {
+          e.preventDefault();
+          
+          // Get form inputs
+          const name = document.getElementById('name');
+          const email = document.getElementById('email');
+          const subject = document.getElementById('subject');
+          const message = document.getElementById('message');
+          
+          // Validate inputs
+          let isValid = true;
+          
+          if (name.value.trim() === '') {
+              showError(name, 'Name is required');
+              isValid = false;
+          } else {
+              removeError(name);
+          }
+          
+          if (email.value.trim() === '') {
+              showError(email, 'Email is required');
+              isValid = false;
+          } else if (!isValidEmail(email.value)) {
+              showError(email, 'Please enter a valid email');
+              isValid = false;
+          } else {
+              removeError(email);
+          }
+          
+          if (subject.value.trim() === '') {
+              showError(subject, 'Subject is required');
+              isValid = false;
+          } else {
+              removeError(subject);
+          }
+          
+          if (message.value.trim() === '') {
+              showError(message, 'Message is required');
+              isValid = false;
+          } else {
+              removeError(message);
+          }
+          
+          // If form is valid, submit or show success message
+          if (isValid) {
+              // In a real implementation, you would send the form data to a server
+              // For now, we'll just show a success message
+              showFormSuccess(contactForm);
+          }
+      });
+  }
+}
+
+/**
+* Shows an error message for a form input
+*/
+function showError(input, message) {
+  const formGroup = input.parentElement;
+  let errorElement = formGroup.querySelector('.error-message');
+  
+  if (!errorElement) {
+      errorElement = document.createElement('div');
+      errorElement.className = 'error-message';
+      formGroup.appendChild(errorElement);
   }
   
-  // User login
-  async function login(username, password) {
-    try {
-      state.isLoading = true;
-      updateUI();
-      
-      const response = await fetch(`${config.apiEndpoint}/auth/login`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, password })
-      });
-      
-      if (!response.ok) {
-        throw new Error('Login failed');
-      }
-      
-      const data = await response.json();
-      localStorage.setItem('farmEyeToken', data.token);
-      state.user = data.user;
-      
-      // Load app after successful login
-      loadFarms();
-      initMap();
-      startDataRefreshCycle();
-      hideLoginScreen();
-    } catch (error) {
-      console.error('Login error:', error);
-      showError('Login failed. Please check your credentials and try again.');
-    } finally {
-      state.isLoading = false;
-      updateUI();
-    }
+  errorElement.textContent = message;
+  formGroup.classList.add('error');
+}
+
+/**
+* Removes error message from a form input
+*/
+function removeError(input) {
+  const formGroup = input.parentElement;
+  const errorElement = formGroup.querySelector('.error-message');
+  
+  if (errorElement) {
+      formGroup.removeChild(errorElement);
   }
   
-  // Load farms data
-  async function loadFarms() {
-    try {
-      state.isLoading = true;
-      updateUI();
-      
-      const token = localStorage.getItem('farmEyeToken');
-      const response = await fetch(`${config.apiEndpoint}/farms`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      
-      if (!response.ok) {
-        throw new Error('Failed to load farms data');
-      }
-      
-      state.farms = await response.json();
-      
-      if (state.farms.length > 0 && !state.currentFarmId) {
-        state.currentFarmId = state.farms[0].id;
-        loadFarmData(state.currentFarmId);
-      }
-      
-      populateFarmSelector();
-    } catch (error) {
-      console.error('Error loading farms:', error);
-      showError('Failed to load farm data. Please try again later.');
-    } finally {
-      state.isLoading = false;
-      updateUI();
-    }
-  }
+  formGroup.classList.remove('error');
+}
+
+/**
+* Validates email format
+*/
+function isValidEmail(email) {
+  const re = /^(([^<>()\[\]\\.,;:\s@"]+(\.[^<>()\[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/;
+  return re.test(String(email).toLowerCase());
+}
+
+/**
+* Shows success message after form submission
+*/
+function showFormSuccess(form) {
+  // Create success message
+  const successMessage = document.createElement('div');
+  successMessage.className = 'success-message';
+  successMessage.textContent = 'Thank you for your message! We will get back to you soon.';
   
-  // Load specific farm data
-  async function loadFarmData(farmId) {
-    try {
-      state.isLoading = true;
-      updateUI();
-      
-      const token = localStorage.getItem('farmEyeToken');
-      
-      // Load sensors data
-      const sensorsResponse = await fetch(`${config.apiEndpoint}/farms/${farmId}/sensors`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      
-      if (!sensorsResponse.ok) {
-        throw new Error('Failed to load sensors data');
-      }
-      
-      state.sensors = await sensorsResponse.ok ? await sensorsResponse.json() : [];
-      
-      // Load soil data
-      const soilResponse = await fetch(`${config.apiEndpoint}/farms/${farmId}/soil`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      
-      state.soilData = await soilResponse.ok ? await soilResponse.json() : {};
-      
-      // Load weather data
-      const weatherResponse = await fetch(`${config.apiEndpoint}/farms/${farmId}/weather`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      
-      state.weatherData = await weatherResponse.ok ? await weatherResponse.json() : null;
-      
-      // Update last updated timestamp
-      state.lastUpdated = new Date();
-      
-      // Check for alerts
-      checkAlerts();
-      
-      // Update the UI with new data
-      updateChartsAndWidgets();
-      updateMap();
-    } catch (error) {
-      console.error('Error loading farm data:', error);
-      showError('Failed to load detailed farm data. Please try again later.');
-    } finally {
-      state.isLoading = false;
-      updateUI();
-    }
-  }
+  // Hide form
+  form.style.display = 'none';
   
-  // Initialize map
-  function initMap() {
-    // Implementation will depend on the mapping library you're using
-    // (e.g., Leaflet, Google Maps, etc.)
-    console.log('Initializing map with settings:', config.mapSettings);
-    
-    // Example using a hypothetical map library
-    const map = new FarmMap(elements.mapContainer, {
-      zoom: config.mapSettings.initialZoom,
-      center: config.mapSettings.center,
-      tileProvider: config.mapSettings.tileProvider
-    });
-    
-    // Store map instance for later use
-    state.map = map;
-  }
+  // Add success message after form
+  form.parentNode.insertBefore(successMessage, form.nextSibling);
   
-  // Update map with current farm data
-  function updateMap() {
-    if (!state.map || !state.currentFarmId) return;
-    
-    const currentFarm = state.farms.find(farm => farm.id === state.currentFarmId);
-    if (!currentFarm) return;
-    
-    // Center map on current farm
-    state.map.setCenter({
-      lat: currentFarm.location.latitude,
-      lng: currentFarm.location.longitude
-    });
-    
-    // Clear existing markers
-    state.map.clearMarkers();
-    
-    // Add farm boundary
-    if (currentFarm.boundary) {
-      state.map.addBoundary(currentFarm.boundary);
-    }
-    
-    // Add sensor markers
-    state.sensors.forEach(sensor => {
-      state.map.addMarker({
-        lat: sensor.location.latitude,
-        lng: sensor.location.longitude,
-        type: sensor.type,
-        id: sensor.id,
-        status: sensor.status
-      });
-    });
-  }
+  // Reset form
+  form.reset();
   
-  // Check for alerts based on sensor data
-  function checkAlerts() {
-    const alerts = [];
-    
-    // Check soil moisture alerts
-    if (state.soilData.moisture) {
-      state.soilData.moisture.forEach(reading => {
-        if (reading.value < 20) {
-          alerts.push({
-            type: 'warning',
-            message: `Low soil moisture (${reading.value}%) at sensor ${reading.sensorId}`,
-            timestamp: new Date(),
-            location: reading.location
+  // Restore form after 5 seconds
+  setTimeout(() => {
+      form.style.display = 'block';
+      successMessage.remove();
+  }, 5000);
+}
+
+/**
+* Scroll Animations
+* Animates elements when they come into view
+*/
+function initScrollAnimations() {
+  const elements = document.querySelectorAll('.solution-card, .feature, .user-card, .team-member, .sdg-item');
+  
+  // Check if IntersectionObserver is supported
+  if ('IntersectionObserver' in window) {
+      const observer = new IntersectionObserver((entries) => {
+          entries.forEach(entry => {
+              if (entry.isIntersecting) {
+                  entry.target.classList.add('animate');
+                  observer.unobserve(entry.target);
+              }
           });
-        }
+      }, {
+          threshold: 0.2
       });
-    }
-    
-    // Check weather alerts
-    if (state.weatherData && state.weatherData.forecast) {
-      const forecast = state.weatherData.forecast;
-      if (forecast.precipitation > 80) {
-        alerts.push({
-          type: 'info',
-          message: `High precipitation chance (${forecast.precipitation}%) forecasted in the next 24 hours`,
-          timestamp: new Date()
-        });
+      
+      elements.forEach(element => {
+          element.classList.add('fade-in');
+          observer.observe(element);
+      });
+  } else {
+      // Fallback for browsers that don't support IntersectionObserver
+      elements.forEach(element => {
+          element.classList.add('animate');
+      });
+  }
+}
+
+/**
+* Hero Image Carousel Functionality
+* Manages automatic and manual sliding of hero images
+*/
+function initHeroCarousel() {
+  const carousel = document.querySelector('.hero-carousel');
+  
+  if (carousel) {
+      const slides = carousel.querySelectorAll('.carousel-slide');
+      const indicators = carousel.querySelectorAll('.indicator');
+      const prevBtn = carousel.querySelector('.carousel-control.prev');
+      const nextBtn = carousel.querySelector('.carousel-control.next');
+      
+      let currentSlide = 0;
+      let interval;
+      const autoSlideDelay = 5000; // Change slide every 5 seconds
+      
+      // Function to update active slide
+      function updateSlide(index) {
+          // Remove active class from all slides and indicators
+          slides.forEach(slide => slide.classList.remove('active'));
+          indicators.forEach(dot => dot.classList.remove('active'));
+          
+          // Add active class to current slide and indicator
+          slides[index].classList.add('active');
+          indicators[index].classList.add('active');
+          
+          // Update current slide index
+          currentSlide = index;
       }
       
-      if (forecast.temperature.max > 95) {
-        alerts.push({
-          type: 'warning',
-          message: `Extreme heat warning: ${forecast.temperature.max}°F expected`,
-          timestamp: new Date()
-        });
+      // Function to go to next slide
+      function nextSlide() {
+          const newIndex = (currentSlide + 1) % slides.length;
+          updateSlide(newIndex);
       }
-    }
-    
-    // Check sensor health
-    state.sensors.forEach(sensor => {
-      if (sensor.status === 'offline' || sensor.battery < 10) {
-        alerts.push({
-          type: 'error',
-          message: `Sensor ${sensor.id} offline or low battery (${sensor.battery}%)`,
-          timestamp: new Date(),
-          sensorId: sensor.id
-        });
-      }
-    });
-    
-    // Update alerts in state
-    state.alerts = alerts;
-    
-    // Display alerts in UI
-    displayAlerts(alerts);
-  }
-  
-  // Display alerts in the UI
-  function displayAlerts(alerts) {
-    if (!elements.alertsPanel) return;
-    
-    elements.alertsPanel.innerHTML = '';
-    
-    if (alerts.length === 0) {
-      elements.alertsPanel.innerHTML = '<div class="no-alerts">No active alerts</div>';
-      return;
-    }
-    
-    alerts.forEach(alert => {
-      const alertElement = document.createElement('div');
-      alertElement.className = `alert alert-${alert.type}`;
-      alertElement.innerHTML = `
-        <div class="alert-time">${formatTime(alert.timestamp)}</div>
-        <div class="alert-message">${alert.message}</div>
-        <button class="alert-dismiss" data-id="${Math.random().toString(36).substr(2, 9)}">×</button>
-      `;
-      elements.alertsPanel.appendChild(alertElement);
-    });
-    
-    // Add event listeners to dismiss buttons
-    document.querySelectorAll('.alert-dismiss').forEach(button => {
-      button.addEventListener('click', (e) => {
-        e.target.parentElement.remove();
-      });
-    });
-  }
-  
-  // Update charts and widgets with new data
-  function updateChartsAndWidgets() {
-    // Update soil moisture chart
-    if (elements.soilMoistureChart && state.soilData.moisture) {
-      updateSoilMoistureChart(state.soilData.moisture);
-    }
-    
-    // Update temperature chart
-    if (elements.temperatureChart && state.soilData.temperature) {
-      updateTemperatureChart(state.soilData.temperature);
-    }
-    
-    // Update weather widget
-    if (elements.weatherWidget && state.weatherData) {
-      updateWeatherWidget(state.weatherData);
-    }
-  }
-  
-  // Update soil moisture chart
-  function updateSoilMoistureChart(moistureData) {
-    // Implementation depends on the charting library you're using
-    // (e.g., Chart.js, D3.js, etc.)
-    console.log('Updating soil moisture chart with data:', moistureData);
-    
-    // Example implementation
-    const labels = moistureData.map(d => formatTime(d.timestamp));
-    const values = moistureData.map(d => d.value);
-    
-    // Create or update chart
-    if (!state.charts) state.charts = {};
-    
-    if (!state.charts.soilMoisture) {
-      state.charts.soilMoisture = new FarmChart(elements.soilMoistureChart, {
-        type: 'line',
-        title: 'Soil Moisture',
-        yAxisLabel: 'Moisture (%)',
-        xAxisLabel: 'Time'
-      });
-    }
-    
-    state.charts.soilMoisture.updateData({
-      labels: labels,
-      datasets: [{
-        label: 'Moisture %',
-        data: values,
-        color: '#1E88E5'
-      }]
-    });
-  }
-  
-  // Update temperature chart
-  function updateTemperatureChart(temperatureData) {
-    console.log('Updating temperature chart with data:', temperatureData);
-    
-    const labels = temperatureData.map(d => formatTime(d.timestamp));
-    const values = temperatureData.map(d => d.value);
-    
-    if (!state.charts) state.charts = {};
-    
-    if (!state.charts.temperature) {
-      state.charts.temperature = new FarmChart(elements.temperatureChart, {
-        type: 'line',
-        title: 'Soil Temperature',
-        yAxisLabel: 'Temperature (°F)',
-        xAxisLabel: 'Time'
-      });
-    }
-    
-    state.charts.temperature.updateData({
-      labels: labels,
-      datasets: [{
-        label: 'Temperature °F',
-        data: values,
-        color: '#FF5722'
-      }]
-    });
-  }
-  
-  // Update weather widget
-  function updateWeatherWidget(weatherData) {
-    if (!elements.weatherWidget) return;
-    
-    const current = weatherData.current;
-    const forecast = weatherData.forecast;
-    
-    elements.weatherWidget.innerHTML = `
-      <div class="weather-current">
-        <div class="weather-temp">${current.temperature}°F</div>
-        <div class="weather-condition">${current.condition}</div>
-        <div class="weather-details">
-          <div>Humidity: ${current.humidity}%</div>
-          <div>Wind: ${current.windSpeed} mph ${current.windDirection}</div>
-        </div>
-      </div>
-      <div class="weather-forecast">
-        <h4>Forecast</h4>
-        <div class="forecast-items">
-          ${forecast.daily.slice(0, 3).map(day => `
-            <div class="forecast-item">
-              <div class="forecast-day">${formatDay(day.date)}</div>
-              <div class="forecast-temp">${day.temperature.min}° - ${day.temperature.max}°</div>
-              <div class="forecast-condition">${day.condition}</div>
-            </div>
-          `).join('')}
-        </div>
-      </div>
-    `;
-  }
-  
-  // Format timestamp for display
-  function formatTime(timestamp) {
-    const date = new Date(timestamp);
-    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-  }
-  
-  // Format day for weather forecast
-  function formatDay(dateString) {
-    const date = new Date(dateString);
-    return date.toLocaleDateString([], { weekday: 'short' });
-  }
-  
-  // Populate farm selector dropdown
-  function populateFarmSelector() {
-    if (!elements.farmSelector || !state.farms) return;
-    
-    elements.farmSelector.innerHTML = '';
-    
-    state.farms.forEach(farm => {
-      const option = document.createElement('option');
-      option.value = farm.id;
-      option.textContent = farm.name;
-      option.selected = farm.id === state.currentFarmId;
-      elements.farmSelector.appendChild(option);
-    });
-  }
-  
-  // Set up event listeners
-  function setupEventListeners() {
-    // Farm selector change
-    if (elements.farmSelector) {
-      elements.farmSelector.addEventListener('change', (e) => {
-        const farmId = e.target.value;
-        state.currentFarmId = farmId;
-        loadFarmData(farmId);
-      });
-    }
-    
-    // Refresh button
-    if (elements.refreshButton) {
-      elements.refreshButton.addEventListener('click', () => {
-        if (state.currentFarmId) {
-          loadFarmData(state.currentFarmId);
-        }
-      });
-    }
-    
-    // Settings button
-    if (elements.settingsButton) {
-      elements.settingsButton.addEventListener('click', () => {
-        showSettingsPanel();
-      });
-    }
-    
-    // Login form
-    if (elements.loginForm) {
-      elements.loginForm.addEventListener('submit', (e) => {
-        e.preventDefault();
-        const username = document.getElementById('username').value;
-        const password = document.getElementById('password').value;
-        login(username, password);
-      });
-    }
-  }
-  
-  // Show login screen
-  function showLoginScreen() {
-    document.querySelector('.login-container').classList.remove('hidden');
-    document.querySelector('.app-container').classList.add('hidden');
-  }
-  
-  // Hide login screen
-  function hideLoginScreen() {
-    document.querySelector('.login-container').classList.add('hidden');
-    document.querySelector('.app-container').classList.remove('hidden');
-  }
-  
-  // Show settings panel
-  function showSettingsPanel() {
-    // Implementation will depend on your UI structure
-    console.log('Showing settings panel');
-  }
-  
-  // Show error message
-  function showError(message) {
-    const errorElement = document.getElementById('error-message');
-    if (errorElement) {
-      errorElement.textContent = message;
-      errorElement.classList.remove('hidden');
       
-      // Auto-hide after 5 seconds
-      setTimeout(() => {
-        errorElement.classList.add('hidden');
-      }, 5000);
-    }
+      // Function to go to previous slide
+      function prevSlide() {
+          const newIndex = (currentSlide - 1 + slides.length) % slides.length;
+          updateSlide(newIndex);
+      }
+      
+      // Start automatic slideshow
+      function startAutoSlide() {
+          interval = setInterval(nextSlide, autoSlideDelay);
+      }
+      
+      // Stop automatic slideshow
+      function stopAutoSlide() {
+          clearInterval(interval);
+      }
+      
+      // Event listeners for manual controls
+      if (nextBtn) {
+          nextBtn.addEventListener('click', () => {
+              stopAutoSlide();
+              nextSlide();
+              startAutoSlide();
+          });
+      }
+      
+      if (prevBtn) {
+          prevBtn.addEventListener('click', () => {
+              stopAutoSlide();
+              prevSlide();
+              startAutoSlide();
+          });
+      }
+      
+      // Add click events to indicators
+      indicators.forEach((dot, index) => {
+          dot.addEventListener('click', () => {
+              stopAutoSlide();
+              updateSlide(index);
+              startAutoSlide();
+          });
+      });
+      
+      // Pause slideshow when hovering over carousel
+      carousel.addEventListener('mouseenter', stopAutoSlide);
+      carousel.addEventListener('mouseleave', startAutoSlide);
+      
+      // Touch events for mobile swipe
+      let touchStartX = 0;
+      let touchEndX = 0;
+      
+      carousel.addEventListener('touchstart', e => {
+          touchStartX = e.changedTouches[0].screenX;
+      }, { passive: true });
+      
+      carousel.addEventListener('touchend', e => {
+          touchEndX = e.changedTouches[0].screenX;
+          handleSwipe();
+      }, { passive: true });
+      
+      function handleSwipe() {
+          const swipeThreshold = 50; // Minimum distance to register a swipe
+          
+          if (touchEndX < touchStartX - swipeThreshold) {
+              // Swiped left (next)
+              stopAutoSlide();
+              nextSlide();
+              startAutoSlide();
+          } else if (touchEndX > touchStartX + swipeThreshold) {
+              // Swiped right (previous)
+              stopAutoSlide();
+              prevSlide();
+              startAutoSlide();
+          }
+      }
+      
+      // Start the slideshow
+      startAutoSlide();
   }
+}
+
+/**
+* Initialize sliders or carousels if needed
+*/
+function initSliders() {
+  // Could initialize testimonial sliders, etc.
+  // Example implementation for a simple slider
+  const sliders = document.querySelectorAll('.slider');
   
-  // Update UI based on state
-  function updateUI() {
-    // Update loading indicator
-    if (elements.loadingIndicator) {
-      if (state.isLoading) {
-        elements.loadingIndicator.classList.remove('hidden');
+  sliders.forEach(slider => {
+      if (slider) {
+          const slides = slider.querySelectorAll('.slide');
+          const btnNext = slider.querySelector('.next');
+          const btnPrev = slider.querySelector('.prev');
+          let currentSlide = 0;
+          
+          // Function to update slider position
+          function updateSlider() {
+              slides.forEach((slide, index) => {
+                  slide.style.transform = `translateX(${100 * (index - currentSlide)}%)`;
+              });
+          }
+          
+          // Initialize slider position
+          updateSlider();
+          
+          // Event listeners for navigation buttons
+          if (btnNext) {
+              btnNext.addEventListener('click', () => {
+                  currentSlide = (currentSlide + 1) % slides.length;
+                  updateSlider();
+              });
+          }
+          
+          if (btnPrev) {
+              btnPrev.addEventListener('click', () => {
+                  currentSlide = (currentSlide - 1 + slides.length) % slides.length;
+                  updateSlider();
+              });
+          }
+      }
+  });
+}
+
+/**
+* Initialize modal popups
+*/
+function initModalPopups() {
+  const modalTriggers = document.querySelectorAll('[data-modal]');
+  
+  modalTriggers.forEach(trigger => {
+      trigger.addEventListener('click', function(e) {
+          e.preventDefault();
+          
+          const modalId = this.getAttribute('data-modal');
+          const modal = document.getElementById(modalId);
+          
+          if (modal) {
+              modal.classList.add('active');
+              document.body.classList.add('modal-open');
+              
+              // Close modal when clicking on close button
+              const closeButton = modal.querySelector('.close-modal');
+              if (closeButton) {
+                  closeButton.addEventListener('click', function() {
+                      modal.classList.remove('active');
+                      document.body.classList.remove('modal-open');
+                  });
+              }
+              
+              // Close modal when clicking outside the modal content
+              modal.addEventListener('click', function(e) {
+                  if (e.target === modal) {
+                      modal.classList.remove('active');
+                      document.body.classList.remove('modal-open');
+                  }
+              });
+          }
+      });
+  });
+}
+
+/**
+* Sticky header functionality
+* Makes header stick to top when scrolling down
+*/
+window.addEventListener('scroll', function() {
+  const header = document.querySelector('header');
+  
+  if (window.scrollY > 100) {
+      header.classList.add('sticky');
+  } else {
+      header.classList.remove('sticky');
+  }
+});
+
+/**
+* Back to top button functionality
+*/
+(function() {
+  // Create back to top button
+  const backToTopButton = document.createElement('button');
+  backToTopButton.className = 'back-to-top';
+  backToTopButton.innerHTML = '↑';
+  document.body.appendChild(backToTopButton);
+  
+  // Show/hide button based on scroll position
+  window.addEventListener('scroll', function() {
+      if (window.scrollY > 300) {
+          backToTopButton.classList.add('visible');
       } else {
-        elements.loadingIndicator.classList.add('hidden');
+          backToTopButton.classList.remove('visible');
       }
-    }
-    
-    // Update last updated timestamp
-    const lastUpdatedElement = document.getElementById('last-updated');
-    if (lastUpdatedElement && state.lastUpdated) {
-      lastUpdatedElement.textContent = `Last updated: ${state.lastUpdated.toLocaleTimeString()}`;
-    }
+  });
+  
+  // Scroll to top when button is clicked
+  backToTopButton.addEventListener('click', function() {
+      window.scrollTo({
+          top: 0,
+          behavior: 'smooth'
+      });
+  });
+})();
+
+/**
+* Counter animation for statistics
+* Animates number counting up
+*/
+function initCounters() {
+  const counters = document.querySelectorAll('.counter');
+  
+  if (counters.length > 0) {
+      const observer = new IntersectionObserver((entries) => {
+          entries.forEach(entry => {
+              if (entry.isIntersecting) {
+                  const counter = entry.target;
+                  const target = parseInt(counter.getAttribute('data-target'));
+                  const duration = 2000; // 2 seconds
+                  const increment = target / (duration / 16); // Update every 16ms
+                  
+                  let current = 0;
+                  const updateCounter = () => {
+                      current += increment;
+                      counter.textContent = Math.floor(current);
+                      
+                      if (current < target) {
+                          requestAnimationFrame(updateCounter);
+                      } else {
+                          counter.textContent = target;
+                      }
+                  };
+                  
+                  updateCounter();
+                  observer.unobserve(counter);
+              }
+          });
+      });
+      
+      counters.forEach(counter => {
+          observer.observe(counter);
+      });
   }
-  
-  // Start data refresh cycle
-  function startDataRefreshCycle() {
-    // Set up periodic data refresh
-    setInterval(() => {
-      if (state.currentFarmId) {
-        loadFarmData(state.currentFarmId);
-      }
-    }, config.refreshInterval);
-  }
-  
-  // Logout function
-  function logout() {
-    localStorage.removeItem('farmEyeToken');
-    state = {
-      farms: [],
-      sensors: [],
-      currentFarmId: null,
-      weatherData: null,
-      soilData: {},
-      lastUpdated: null,
-      isLoading: false,
-      user: null
-    };
-    showLoginScreen();
-  }
-  
-  // Initialize the application when the document is ready
-  document.addEventListener('DOMContentLoaded', initApp);
-  
-  // Export public methods for external use
-  window.FarmEye = {
-    refreshData: () => {
-      if (state.currentFarmId) {
-        loadFarmData(state.currentFarmId);
-      }
-    },
-    logout: logout,
-    showSettings: showSettingsPanel
-  };
+}
+
+// Initialize any additional functionality here
+initCounters();

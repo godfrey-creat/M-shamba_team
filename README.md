@@ -1,5 +1,4 @@
 # M-shamba_team
-M-Shamba Website
 FarmEye: Intelligent Farm Monitoring and Disease Detection System 
 
 Welcome to FarmEye – an intelligent, easy-to-use farm monitoring system that helps farmers grow more with less stress. This project uses IoT, AI, and simple-to-use dashboards to solve real problems farmers face every day.

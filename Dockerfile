@@ -10,7 +10,8 @@ WORKDIR /usr/share/nginx/html
 RUN rm -rf ./*
 
 # Copy static assets from builder stage
-COPY ./paste.txt index.html
+COPY index.html main.js css/styles.css images ./
+
 
 # Make sure files are owned by the non-root user
 RUN chown -R appuser:appuser /usr/share/nginx/html

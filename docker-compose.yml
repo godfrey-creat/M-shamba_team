@@ -1,9 +1,14 @@
-version: '3.8'
+version: '3'
 
 services:
-  web:
-    build: .
+  farmeye-web:
+    build:
+      context: .
+      dockerfile: Dockerfile
     ports:
       - "8080:80"
-    container_name: my-static-site
+    volumes:
+      - ./paste.txt:/usr/share/nginx/html/index.html:ro
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
     restart: unless-stopped
+    container_name: farmeye-web

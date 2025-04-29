@@ -1,6 +1,16 @@
 (function () {
+    // Check if running in a browser environment
+    const isBrowser = typeof window !== 'undefined' && typeof document !== 'undefined';
+    
+    // Exit early if not in browser environment
+    if (!isBrowser) {
+        console.log("This script is designed to run in a browser environment.");
+        // If you're using this with a module system, you could export empty functions here
+        return;
+    }
+    
     // Navigation controls
-    [...document.querySelectorAll(".nav-link")].forEach(link => {
+    document.querySelectorAll(".nav-link").forEach(link => {
         link.addEventListener("click", function(e) {
             e.preventDefault();
             // Remove active class from current active link
